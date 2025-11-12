@@ -51,8 +51,23 @@ services:
       interval: 1s
       timeout: 5s
 
+  trt-llm:
+    container_name: trt-llm
+    image: nvcr.io/nvidia/tensorrt-llm/release:gpt-oss-dev
+    ports:
+      - 8000:8000
+    volumes:
+      - ./docker-volumes/trt-llm:/workspace
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
 volumes:
   n8n_data:
   open-webui:
+
     external: true
