@@ -1,0 +1,58 @@
+services:
+  n8n:
+    container_name: n8n
+    image: docker.n8n.io/n8nio/n8n
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - N8N_HOST=${SUBDOMAIN}.${DOMAIN_NAME}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - N8N_RUNNERS_ENABLED=true
+      - NODE_ENV=production
+      - WEBHOOK_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}/
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+      - TZ=${GENERIC_TIMEZONE}
+      - N8N_SECURE_COOKIE=${N8N_SECURE_COOKIE}
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./docker-volumes/n8n/local-files:/files
+
+  openwebui:
+    container_name: open-webui
+    image: ghcr.io/open-webui/open-webui:main
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./docker-volumes/open-webui:/app/backend/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - WEBUI_AUTH=False
+      - ENABLE_LOGIN_FORM=False
+      - PGVECTOR_DB_URL=postgresql://${VECTORDB_USER}:${VECTORDB_PASSWORD}@vectordb:5432/${VECTORDB_NAME}
+      - VECTOR_DB=${VECTOR_DB}
+    restart: always
+
+  vectordb:
+    image: ankane/pgvector:latest
+    container_name: vectordb
+    restart: always
+    volumes:
+      - ./docker-volumes/vectordb:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=${VECTORDB_USER}
+      - POSTGRES_PASSWORD=${VECTORDB_PASSWORD}
+      - POSTGRES_DB=${VECTORDB_NAME}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${VECTORDB_USER} -d ${VECTORDB_NAME}"]
+      interval: 1s
+      timeout: 5s
+
+
+volumes:
+  n8n_data:
+  open-webui:
+    external: true
